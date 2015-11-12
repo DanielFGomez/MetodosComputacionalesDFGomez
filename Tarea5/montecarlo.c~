@@ -1,0 +1,42 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
+#define USAGE "./a.out valor"
+
+double integrando(double x)
+{
+  return  exp(-x^2);
+}
+
+int main(int argc, char **argv){
+  float h;
+
+  if(argc!=2){
+    printf("USAGE: %s\n", USAGE);
+    exit(1);
+  }
+  
+  h = atof(argv[1]);
+  double n=0.0;
+  double respuesta=0.0;
+  double mu=0.0;
+  double varia=0.0;
+  time_t t;
+  srand((unsigned) time(&t));
+
+
+  while(varia>=h**2 or n<100)
+   {
+    double x=(((double)rand()/(double)RAND_MAX))*5-10;
+    respuesta=(respuesta*n+10*integrando(x))/(n+1);
+    varia=((varia+mu^2)*n+respuesta**2)/(n+1)-	((mu*n+respuesta)/(n+1))^2;
+    mu=(mu*n+respuesta)/(n+1);
+    n+=1;
+    
+   }
+
+  printf("Respuesta: %f\n", double);
+
+  return 0;
+}

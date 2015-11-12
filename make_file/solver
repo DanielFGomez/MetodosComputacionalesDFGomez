@@ -1,0 +1,25 @@
+void iteration(float *u_future, float *u_present, float *u_past, int n_puntos, float r){
+  int i;
+  for(i=1;i<(n_puntos-1);i++){
+    u_future[i] = (2.0*(1.0-r*r))*u_present[i] - u_past[i] + 
+      (r*r)*(u_present[i+1] +  u_present[i-1]);
+  }
+}
+
+void first_iteration(float *u_future, float *u_initial, int n_puntos, float r){
+  int i;  
+  for(i=1;i<(n_puntos-1);i++){
+    u_future[i] = u_initial[i] + 
+      (r*r/2.0) * (u_initial[i+1] - 2.0 * u_initial[i] + u_initial[i-1]);
+  }
+}
+void set_initial(float *array, int n_puntos, float delta_x){
+  int i;
+  float x;
+  for(i=0;i<n_puntos;i++){
+    x = i * delta_x;
+    array[i] = exp(-((x-0.3)*(x-0.3))/0.01);
+  }
+  array[0] = 0.0;
+  array[n_puntos-1] = 0.0;
+}

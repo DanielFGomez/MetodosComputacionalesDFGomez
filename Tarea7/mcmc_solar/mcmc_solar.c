@@ -10,17 +10,28 @@ float *reserva(int n_puntos);
 void print_array(float * array, int n_puntos, float delta_x);
 void copy(float *origen, float *destino, int n_puntos);
 float fun(float);
-float newPoint(float);
 float gaussian();
 float chi(double a, double b, double c, double d);
-void iterar()
+void iterar();
+void importarDatos(float *x, float *y);
+
+int main(int argc, char **argv){
+
+  int n_iterations=atoi(argv[1]);
+  int n_burn=atoi(argv[2]);
+  float * x,y;
+  float a0=0;
+  float b0=0;
+  float c0=0;
+  float d0=0;
+ 
+  importarDatos(x,y);
+  n_iterations=atoi(argv[1]);
+  n_burn=atoi(argv[2]);
 
 
-int main(){
-  int n_iterations=100;
+
   float *camino;
-  srand48(time(NULL));
-
   camino = reserva(n_iterations+1);
   camino[0] = rand48()*8.0-4.0;
   

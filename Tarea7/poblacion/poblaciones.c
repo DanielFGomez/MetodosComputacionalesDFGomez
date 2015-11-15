@@ -10,11 +10,11 @@ double *reserva(int n_puntos);
 void print_array(double * array, int n_puntos, double delta_x);
 void copy(double *origen, double *destino, int n_puntos);
 int importarDatos(double *t, double *x, double *y, char *filename);
-void guardar(double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones);
+void guardar(double *chi,double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones);
 
 
-void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, double *t, int numT,int iterMCMC);
-double chi(double a, double b, double c, double d, double *x, double *y, double *t, int numT);
+void mcmc(double *chi, double *a, double *b, double *c, double *d, double *x, double *y, double *t, int numT,int iterMCMC);
+double chi2(double a, double b, double c, double d, double *x, double *y, double *t, int numT);
 
 void RungeKutta(double a, double b, double c, double d, double *x, double *y, double x0, double y0, int iterRK);
 double dX(double a, double b, double x, double y);
@@ -38,11 +38,9 @@ int main(int argc, char **argv){
   int numT;
   int iterRK=1000;
   iterMCMC=n_iterations+n_burn;  
-
-  printf("Logro leer entradas");
   
   double *x,*y,*t;
-  double *a,*b,*c,*d;
+  double *a,*b,*c,*d,*chi;
   t=reserva(1000);
   x=reserva(1000);
   y=reserva(1000);//Se usa mucho mas espacio del necesario para no tener problemas con el numero de datos
@@ -50,22 +48,18 @@ int main(int argc, char **argv){
   b=reserva(iterMCMC);
   c=reserva(iterMCMC);
   d=reserva(iterMCMC);
+  chi=reserva(iterMCMC);
 
-  printf("Logro inciar arrays");
+  numT=importarDatos(t,x,y,"prueba.dat");//Ojo cambiar despues de pruebas
 
-  numT=importarDatos(t,x,y,"lotka_volterra_obs.dat");
-  printf("importo todo y no se quejo");
-
-  mcmc(a,b,c,d,x,y,t,numT,iterMCMC);
-  printf("Hizo mcmc y no se quejo");
+  mcmc(chi,a,b,c,d,x,y,t,numT,iterMCMC);
 
   imprimirResultados("a",a,n_burn,n_iterations);
   imprimirResultados("b",b,n_burn,n_iterations);
   imprimirResultados("c",c,n_burn,n_iterations);
   imprimirResultados("d",d,n_burn,n_iterations);
-  //print_array(a,iterMCMC,1);
 
-  guardar(a,b,c,d,n_burn,n_iterations);  
+  guardar(chi,a,b,c,d,n_burn,n_iterations);  
 
 }
 
@@ -99,15 +93,15 @@ double *reserva(int n_puntos){
   return array;
 }
 
-void guardar(double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones){
+void guardar(double *chi, double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones){
   FILE *in;
   int n;
   int i;
   char filename[100]="poblaciones.dat";
   in = fopen(filename,"w");
-  for(n=i;n<n_iteraciones;n++){
+  for(n=0;n<n_iteraciones;n++){
     i=n+n_burn;
-    fprintf(in,"%f, %f, %f, %f\n",a[i], b[i], c[i], d[i]);
+    fprintf(in,"%f %f %f %f %f\n",chi[i], a[i], b[i], c[i], d[i]);
   }
   fclose(in);
 }
@@ -169,7 +163,7 @@ void RungeKutta(double a, double b, double c, double d, double *x, double *y, do
 /* Metodos del MCMC
 -----------------------------------------------------------------------------*/
     
-void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, double *t, int numT, int iterMCMC){
+void mcmc(double *chi, double *a, double *b, double *c, double *d, double *x, double *y, double *t, int numT, int iterMCMC){
     /*Inicializa el RNG gausiano y el uniforme*/
     const gsl_rng_type * T;
     gsl_rng * r;
@@ -180,37 +174,49 @@ void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, doub
     srand48(time(NULL));
     
     /*Otras variables*/
-    double aNew,bNew,cNew,dNew,chiOld, chiNew;
-    double step=0.1;
+    double aNew,bNew,cNew,dNew, chiNew;
+    double step=10.0;
     int i;
     
     for(i=0;i<iterMCMC-1;i++){
-        aNew=a[i]+gsl_ran_gaussian(r, step);
+	// if(i>iterMCMC-22){printf("%f\n",gsl_ran_gaussian(r, step));} // Prueba del RNG gausiano
+	aNew=a[i]+gsl_ran_gaussian(r, step);
         bNew=b[i]+gsl_ran_gaussian(r, step);
         cNew=c[i]+gsl_ran_gaussian(r, step);
         dNew=d[i]+gsl_ran_gaussian(r, step);
        
-        chiOld=chi(a[i],b[i],c[i],d[i],x,y,t,numT);
-        chiNew=chi(aNew,bNew,cNew,dNew,x,y,t,numT);
+        chi[i]=chi2(a[i],b[i],c[i],d[i],x,y,t,numT);
+        chiNew=chi2(aNew,bNew,cNew,dNew,x,y,t,numT);
+	
         
-        double p=exp(chiOld-chiNew);
-        if(p>drand48()){
-            a[i+1]=aNew;
+	if(chiNew<chi[i]){
+	    printf("Bajo en %d\n",i);//Prueba
+	    a[i+1]=aNew;
             b[i+1]=bNew;
             c[i+1]=cNew;
             d[i+1]=dNew;
-        }
-        else{
-            a[i+1]=a[i];
-            b[i+1]=b[i];
-            c[i+1]=c[i];
-            d[i+1]=d[i];
+	}
+	else{
+		double p=exp(chi[i]-chiNew);
+		if(p>drand48()){
+        	    a[i+1]=aNew;
+        	    b[i+1]=bNew;
+        	    c[i+1]=cNew;
+        	    d[i+1]=dNew;
+        	}
+        	else{
+        	    a[i+1]=a[i];
+        	    b[i+1]=b[i];
+        	    c[i+1]=c[i];
+        	    d[i+1]=d[i];
+		}	
 	}
     }
+  chi[i]=chi2(a[i],b[i],c[i],d[i],x,y,t,numT);
 }
 
         
-double chi(double a, double b, double c, double d, double *x, double *y, double *t, int numT){
+double chi2(double a, double b, double c, double d, double *x, double *y, double *t, int numT){
     double *xNew, *yNew;
     int iterRK=1000;
     xNew=reserva(iterRK);

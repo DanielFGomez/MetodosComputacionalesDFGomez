@@ -4,12 +4,13 @@
 #include <time.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+#define USAGE "./mcmc_lotkavolterra.x n_steps n_burn"
 
 double *reserva(int n_puntos);
 void print_array(double * array, int n_puntos, double delta_x);
 void copy(double *origen, double *destino, int n_puntos);
-void importarDatos(double *t, double *x, double *y, char *filename);
-void guardar(double *x, double *y);
+int importarDatos(double *t, double *x, double *y, char *filename);
+void guardar(double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones);
 
 
 void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, double *t, int numT,int iterMCMC);
@@ -19,26 +20,53 @@ void RungeKutta(double a, double b, double c, double d, double *x, double *y, do
 double dX(double a, double b, double x, double y);
 double dY(double c, double d, double x, double y);
 
-
-int numT;
+double darPromedio(double *a,int n_burn, int n_iterations);
+double darDesviacion(double *a,int n_burn, int n_iterations);
+void imprimirResultados(char *nom, double *a, int n_burn, int n_iterations);
 
 int main(int argc, char **argv){
 
 
+  if(argc!=3){
+    printf("USAGE: %s\n", USAGE);
+    exit(1);
+  }
+  
   int n_iterations=atoi(argv[1]);
   int n_burn=atoi(argv[2]);
-  double *x,*y;
-  double a,b,c,d;
-  importarDatos(x,y,"lotka_volterra_obs.dat");
-  a=b=c=d=1;
-  x=reserva(1000);
-  y=reserva(1000);
-  RungeKutta(a,5,12,6,x,y,13,16,1000);
-  print_array(y,22,1);
+  int iterMCMC;
+  int numT;
+  int iterRK=1000;
+  iterMCMC=n_iterations+n_burn;  
 
-  guardar(x,y);
-
+  printf("Logro leer entradas");
   
+  double *x,*y,*t;
+  double *a,*b,*c,*d;
+  t=reserva(1000);
+  x=reserva(1000);
+  y=reserva(1000);//Se usa mucho mas espacio del necesario para no tener problemas con el numero de datos
+  a=reserva(iterMCMC);
+  b=reserva(iterMCMC);
+  c=reserva(iterMCMC);
+  d=reserva(iterMCMC);
+
+  printf("Logro inciar arrays");
+
+  numT=importarDatos(t,x,y,"lotka_volterra_obs.dat");
+  printf("importo todo y no se quejo");
+
+  mcmc(a,b,c,d,x,y,t,numT,iterMCMC);
+  printf("Hizo mcmc y no se quejo");
+
+  imprimirResultados("a",a,n_burn,n_iterations);
+  imprimirResultados("b",b,n_burn,n_iterations);
+  imprimirResultados("c",c,n_burn,n_iterations);
+  imprimirResultados("d",d,n_burn,n_iterations);
+  //print_array(a,iterMCMC,1);
+
+  guardar(a,b,c,d,n_burn,n_iterations);  
+
 }
 
 /*Metodos Auxiliares
@@ -59,7 +87,7 @@ void print_array(double * array, int n_puntos, double delta_x){
 }
 
 double *reserva(int n_puntos){
-  double *array;
+  double *array=malloc(n_puntos*sizeof(double));
   int i;
   if(!(array = malloc(n_puntos * sizeof(double)))){
     printf("Problema en reserva\n");
@@ -70,16 +98,16 @@ double *reserva(int n_puntos){
   }
   return array;
 }
-/*OJO cambiar despues de probar que funcione la EQdiff*/
-void guardar(double *x, double *y){
+
+void guardar(double *a, double *b,double *c, double *d, int n_burn, int n_iteraciones){
   FILE *in;
   int n;
+  int i;
   char filename[100]="poblaciones.dat";
   in = fopen(filename,"w");
-  double t;
-  for(n=0;n<=1000;n++){
-    t=n*0.001;
-    fprintf(in,"%f, %f, %f\n",t, x[n],y[n]);
+  for(n=i;n<n_iteraciones;n++){
+    i=n+n_burn;
+    fprintf(in,"%f, %f, %f, %f\n",a[i], b[i], c[i], d[i]);
   }
   fclose(in);
 }
@@ -114,7 +142,7 @@ void RungeKutta(double a, double b, double c, double d, double *x, double *y, do
     y[0]=y0;
     
     int i;
-    for(i=0;i<iterRK;i++){
+    for(i=0;i<iterRK-1;i++){
 
         /*Parte 1*/
         xk1=dX(a,b,x[i],y[i])*dt;
@@ -136,7 +164,6 @@ void RungeKutta(double a, double b, double c, double d, double *x, double *y, do
         x[i+1]=x[i]+(xk1+2*xk2+2*xk3+xk4)/6.0;
         y[i+1]=y[i]+(yk1+2*yk2+2*yk3+yk4)/6.0;
     }
-  print_array(y,22,1);
 }
     
 /* Metodos del MCMC
@@ -157,12 +184,12 @@ void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, doub
     double step=0.1;
     int i;
     
-    for(i=0;i<=iterMCMC;i++){
+    for(i=0;i<iterMCMC-1;i++){
         aNew=a[i]+gsl_ran_gaussian(r, step);
         bNew=b[i]+gsl_ran_gaussian(r, step);
         cNew=c[i]+gsl_ran_gaussian(r, step);
         dNew=d[i]+gsl_ran_gaussian(r, step);
-        
+       
         chiOld=chi(a[i],b[i],c[i],d[i],x,y,t,numT);
         chiNew=chi(aNew,bNew,cNew,dNew,x,y,t,numT);
         
@@ -186,15 +213,49 @@ void mcmc(double *a, double *b, double *c, double *d, double *x, double *y, doub
 double chi(double a, double b, double c, double d, double *x, double *y, double *t, int numT){
     double *xNew, *yNew;
     int iterRK=1000;
+    xNew=reserva(iterRK);
+    yNew=reserva(iterRK);
     RungeKutta(a,b,c,d,xNew,yNew,x[0],y[0],iterRK);
     
     double chi=0;
     int i;
     int j;
-    for(i=0;i<=numT;i++){
+    for(i=0;i<numT;i++){
         j=(int)floor(t[i]*iterRK);
         chi=chi+pow(xNew[j]-x[i],2)+pow(yNew[j]-y[i],2);
     }
     return chi;
 }
-    
+   
+/*Metodos que retornan los resultados
+--------------------------------------------------------------------------*/
+double darPromedio(double *a, int n_burn, int n_iterations){
+	double prom=0;
+	int i;
+	for (i=0;i<n_iterations;i++){
+		prom=prom+a[i+n_burn];
+	}
+	return prom/n_iterations;
+}
+
+double darDesviacion(double *a, int n_burn, int n_iterations){
+	double var=0;
+	double prom=darPromedio(a, n_burn, n_iterations);	
+	int i;
+	for (i=0;i<n_iterations;i++){
+		var=var+pow(a[i+n_burn]-prom,2);
+	}
+	var=var/n_iterations;	
+	return sqrt(var);
+}
+
+void imprimirResultados(char *nom, double *a, int n_burn, int n_iterations){
+	double prom=darPromedio(a,n_burn,n_iterations);
+	double desv=darDesviacion(a,n_burn,n_iterations);
+
+	printf("Valor optimo del parametro %s: %f   Incertidumbre: %f\n",nom,prom,desv);
+}  
+
+
+
+

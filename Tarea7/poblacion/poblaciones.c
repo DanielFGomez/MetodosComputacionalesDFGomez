@@ -50,7 +50,14 @@ int main(int argc, char **argv){
   d=reserva(iterMCMC);
   chi=reserva(iterMCMC);
 
-  numT=importarDatos(t,x,y,"prueba.dat");//Ojo cambiar despues de pruebas
+
+  a[0]=100;
+  b[0]=5;
+  c[0]=20;
+  d[0]=1;
+
+
+  numT=importarDatos(t,x,y,"lotka_volterra_obs.dat");
 
   mcmc(chi,a,b,c,d,x,y,t,numT,iterMCMC);
 
@@ -170,16 +177,24 @@ void mcmc(double *chi, double *a, double *b, double *c, double *d, double *x, do
     gsl_rng_env_setup();
     T = gsl_rng_default;
     r = gsl_rng_alloc (T);
-    
+
     srand48(time(NULL));
-    
+    //Corremos ran_gaussian un numero aleatorio de veces para cumplir la funcion de la semilla
+    int semillaGauss;
+    semillaGauss=(int) floor(drand48()*100);
+    int n;
+    for (n=0;n<semillaGauss;n++){
+	gsl_ran_gaussian(r,1);
+	}    
+
     /*Otras variables*/
     double aNew,bNew,cNew,dNew, chiNew;
-    double step=10.0;
+    double step=0.25;
     int i;
     
     for(i=0;i<iterMCMC-1;i++){
-	// if(i>iterMCMC-22){printf("%f\n",gsl_ran_gaussian(r, step));} // Prueba del RNG gausiano
+	 //if(i>iterMCMC-22){printf("%f\n",gsl_ran_gaussian(r, step));} // Prueba del RNG gausiano
+	//step=10.0/(1000.0+i);//Prueba con step variables	
 	aNew=a[i]+gsl_ran_gaussian(r, step);
         bNew=b[i]+gsl_ran_gaussian(r, step);
         cNew=c[i]+gsl_ran_gaussian(r, step);
@@ -190,7 +205,7 @@ void mcmc(double *chi, double *a, double *b, double *c, double *d, double *x, do
 	
         
 	if(chiNew<chi[i]){
-	    printf("Bajo en %d\n",i);//Prueba
+	    //printf("Bajo en %d\n",i);//Prueba
 	    a[i+1]=aNew;
             b[i+1]=bNew;
             c[i+1]=cNew;
@@ -199,12 +214,14 @@ void mcmc(double *chi, double *a, double *b, double *c, double *d, double *x, do
 	else{
 		double p=exp(chi[i]-chiNew);
 		if(p>drand48()){
+		    //printf("Subio aleatorio con cambio chi %f\n",chi[i]-chiNew);//Prueba
         	    a[i+1]=aNew;
         	    b[i+1]=bNew;
         	    c[i+1]=cNew;
         	    d[i+1]=dNew;
         	}
         	else{
+		    //printf("Se mantuvo con delta chi = %f\n",chi[i]-chiNew);//Prueba
         	    a[i+1]=a[i];
         	    b[i+1]=b[i];
         	    c[i+1]=c[i];

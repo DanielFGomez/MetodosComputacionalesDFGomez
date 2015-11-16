@@ -17,6 +17,7 @@ def RungeKutta(a, b, c, d, x0, y0,iterRK):
 	y[0]=y0;
     	t=np.arange(iterRK)*dt
 
+	print("a=%f  b=%f  c=%f  d=%f\n" %(a,b,c,d))
 	for i in range(iterRK-1):
 
 	        #/*Parte 1*/
@@ -53,25 +54,72 @@ b=data[:,2]
 c=data[:,3]
 d=data[:,4]
 print(chi[-1])
-#plt.plot(chi)
+print("\n Ultimos a=%f  b=%f  c=%f  d=%f\n" %(a[-1],b[-1],c[-1],d[-1]))
 
-'''
+
 tP,xP,yP=RungeKutta(np.mean(a),np.mean(b),np.mean(c),np.mean(d),x[0],y[0],1000)
-plt.subplot(2,1,1)
+
+#tU,xU,yU=RungeKutta(a[-1],b[-1],c[-1],d[-1],x[0],y[0],1000) #Prueba
+
+fig1=plt.figure()
+plt.subplot(3,1,1)
 plt.scatter(t,x)
 plt.plot(tP,xP)
-plt.subplot(2,1,2)
+#plt.plot(tU,xU,'r') #Prueba
+plt.subplot(3,1,2)
 plt.scatter(t,y)
 plt.plot(tP,yP)
-'''
-tP,xP,yP=RungeKutta(22,22,22,22,5,2,1000)
-plt.subplot(2,1,1)
-#plt.scatter(t,x)
-plt.plot(tP,xP)
-plt.subplot(2,1,2)
-#plt.scatter(t,y)
-plt.plot(tP,yP)
+#plt.plot(tU,yU,'r') #Prueba
+plt.subplot(3,1,3)
+plt.plot(chi)
+
+AB=np.histogram2d(a,b,bins=20)
+AC=np.histogram2d(a,c,bins=20)
+AD=np.histogram2d(a,d,bins=20)
+
+BC=np.histogram2d(b,c,bins=20)
+BD=np.histogram2d(b,d,bins=20)
+
+CD=np.histogram2d(c,d,bins=20)
+
+fig=plt.figure()
+fig.subplots_adjust(hspace=.6)
+
+plt.subplot(3,3,1)
+plt.imshow(AB[0],cmap="gray_r")
+plt.title("AB")
+plt.ylabel("A")
+plt.xlabel("B")
 
 
+plt.subplot(3,3,2)
+plt.imshow(AC[0],cmap="gray_r")
+plt.title("AC")
+plt.ylabel("A")
+plt.xlabel("C")
+
+plt.subplot(3,3,3)
+plt.imshow(AD[0],cmap="gray_r")
+plt.title("AD")
+plt.ylabel("A")
+plt.xlabel("D")
+
+plt.subplot(3,3,5)
+plt.imshow(BC[0],cmap="gray_r")
+plt.title("BC")
+plt.ylabel("B")
+plt.xlabel("C")
+
+plt.subplot(3,3,6)
+plt.imshow(BD[0],cmap="gray_r")
+plt.title("BD")
+plt.ylabel("B")
+plt.xlabel("D")
+
+plt.subplot(3,3,9)
+plt.imshow(CD[0],cmap="gray_r")
+plt.title("CD")
+plt.ylabel("C")
+plt.xlabel("D")
 
 plt.show()
